@@ -42,31 +42,90 @@
 
 			// App
 			function App() {
+				const context = {
+					theme: window.matchMedia("(prefers-color-scheme: dark)").matches
+						? "dark"
+						: "light",
+				};
+				this.context.set(context);
+
 				let name = "World";
 
-				return () => html`
-					<div
-						css=${{
-							display: "flex",
-							flexDirection: "column",
-							justifyContent: "center",
-							alignItems: "center",
-							gap: "0.5rem",
-							height: "100%",
-						}}
-					>
-						<${HelloWorld}
-							initialName=${name}
-							on=${HelloWorld.input((event) => {
-								name = event.detail;
-								this.render();
-							})}
-						/>
-						<h1>Hello again ${name}</h1>
+				return () => {
+					return html`
+						<form
+							css=${{
+								display: "flex",
+								flexDirection: "column",
+								justifyContent: "center",
+								alignItems: "center",
+								gap: "0.5rem",
+								height: "100%",
+							}}
+						>
+							<div>
+								<h1>Theme</h1>
 
-						<${Counter} initialCount=${3} />
-					</div>
-				`;
+								<div
+									on=${dom.change((event) => {
+										context.theme = event.target.value;
+										this.render();
+									})}
+								>
+									<label>
+										<input
+											type="radio"
+											name="theme"
+											value="light"
+											checked=${context.theme === "light" ? "checked" : null}
+										/>
+										Light
+									</label>
+
+									<label>
+										<input
+											type="radio"
+											name="theme"
+											value="dark"
+											checked=${context.theme === "dark" ? "checked" : null}
+										/>
+										Dark
+									</label>
+								</div>
+
+								<label>
+									<input
+										type="checkbox"
+										checked=${context.theme === "dark" ? "checked" : null}
+										on=${dom.input((event) => {
+											context.theme = event.currentTarget.checked
+												? "dark"
+												: "light";
+											this.render();
+										})}
+									/>
+									Dark
+								</label>
+
+								<br />
+								Theme: ${context.theme}
+							</div>
+
+							<div hidden>
+								<${HelloWorld}
+									initialName=${name}
+									on=${HelloWorld.input((event) => {
+										name = event.detail;
+										this.render();
+									})}
+								/>
+								<h1>Hello again ${name}</h1>
+							</div>
+
+							<${Counter} initialCount=${3} />
+						</form>
+					`;
+				};
 			}
 
 			// HelloWorld
@@ -105,35 +164,46 @@
 
 			// Counter
 			function Counter({ initialCount = 0 }) {
+				const context = this.context.get(App);
 				let count = initialCount;
 
-				return () => html`
-					<div css=${{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-						<h1>Count: ${count}</h1>
+				return () => {
+					return html`
+						<div
+							css=${{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+						>
+							<h1>Count: ${count}</h1>
 
-						<div>
-							<button
-								type="button"
-								on=${dom.click((event) => {
-									count--;
-									this.render();
-								})}
-							>
-								➖
-							</button>
+							<div>
+								<button
+									type="button"
+									css=${context.theme === "dark"
+										? { background: "black", color: "white" }
+										: {}}
+									on=${dom.click((event) => {
+										count--;
+										this.render();
+									})}
+								>
+									➖
+								</button>
 
-							<button
-								type="button"
-								on=${dom.click((event) => {
-									count++;
-									this.render();
-								})}
-							>
-								➕
-							</button>
+								<button
+									type="button"
+									css=${context.theme === "dark"
+										? { background: "black", color: "white" }
+										: {}}
+									on=${dom.click((event) => {
+										count++;
+										this.render();
+									})}
+								>
+									➕
+								</button>
+							</div>
 						</div>
-					</div>
-				`;
+					`;
+				};
 			}
 
 			// Mount
