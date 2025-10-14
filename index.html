@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 	<head>
+		<meta charset="UTF-8" />
 		<title>Remix NoBuild Demo</title>
 
 		<style>
@@ -10,6 +11,10 @@
 			}
 
 			body {
+				margin: 0;
+			}
+
+			h1 {
 				margin: 0;
 			}
 		</style>
@@ -29,24 +34,109 @@
 			import htm from "htm";
 			import { createRoot } from "@remix-run/dom";
 			import { jsx } from "@remix-run/dom/jsx-runtime";
+			import { createEventType, dom } from "@remix-run/events";
 
 			const html = htm.bind((type, props, ...children) => {
 				return jsx(type, { ...props, children }, props?.key);
 			});
 
+			// App
 			function App() {
-				return html`<div
-					css=${{
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						height: "100%",
-					}}
-				>
-					<h1>Hello World</h1>
-				</div>`;
+				let name = "World";
+
+				return () => html`
+					<div
+						css=${{
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "center",
+							alignItems: "center",
+							gap: "0.5rem",
+							height: "100%",
+						}}
+					>
+						<${HelloWorld}
+							initialName=${name}
+							on=${HelloWorld.input((event) => {
+								name = event.detail;
+								this.render();
+							})}
+						/>
+						<h1>Hello again ${name}</h1>
+
+						<${Counter} initialCount=${3} />
+					</div>
+				`;
 			}
 
+			// HelloWorld
+			function HelloWorld({ initialName, ...props }) {
+				let name = initialName;
+
+				return () => html`
+					<div
+						css=${{
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							gap: "0.5rem",
+						}}
+						...${props}
+					>
+						<input
+							type="text"
+							name="name"
+							value=${name}
+							on=${dom.input((event) => {
+								name = event.currentTarget.value;
+								event.currentTarget.dispatchEvent(
+									createInput({ detail: name }),
+								);
+								this.render();
+							})}
+						/>
+						<h1>Hello ${name}</h1>
+					</div>
+				`;
+			}
+
+			const [input, createInput] = createEventType("HelloWorld:input");
+			HelloWorld.input = input;
+
+			// Counter
+			function Counter({ initialCount = 0 }) {
+				let count = initialCount;
+
+				return () => html`
+					<div css=${{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+						<h1>Count: ${count}</h1>
+
+						<div>
+							<button
+								type="button"
+								on=${dom.click((event) => {
+									count--;
+									this.render();
+								})}
+							>
+								➖
+							</button>
+
+							<button
+								type="button"
+								on=${dom.click((event) => {
+									count++;
+									this.render();
+								})}
+							>
+								➕
+							</button>
+						</div>
+					</div>
+				`;
+			}
+
+			// Mount
 			createRoot(document.body).render(html`<${App} />`);
 		</script>
 	</head>
