@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>Remix NoBuild Demo</title>
+
+		<style>
+			html,
+			body {
+				height: 100%;
+			}
+
+			body {
+				margin: 0;
+			}
+		</style>
+
+		<script type="importmap">
+			{
+				"imports": {
+					"@remix-run/dom": "https://unpkg.com/@remix-run/dom@latest/dist/index.js",
+					"@remix-run/dom/jsx-runtime": "https://unpkg.com/@remix-run/dom@latest/dist/jsx-runtime.js",
+					"@remix-run/events": "https://unpkg.com/@remix-run/events@latest/dist/index.js",
+					"@remix-run/style": "https://unpkg.com/@remix-run/style@latest/dist/index.js",
+					"htm": "https://unpkg.com/htm?module"
+				}
+			}
+		</script>
+		<script type="module">
+			import htm from "htm";
+			import { createRoot } from "@remix-run/dom";
+			import { jsx } from "@remix-run/dom/jsx-runtime";
+
+			const html = htm.bind((type, props, ...children) => {
+				return jsx(type, { ...props, children }, props?.key);
+			});
+
+			function App() {
+				return html`<div
+					css=${{
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						height: "100%",
+					}}
+				>
+					<h1>Hello World</h1>
+				</div>`;
+			}
+
+			createRoot(document.body).render(html`<${App} />`);
+		</script>
+	</head>
+
+	<body></body>
+</html>
