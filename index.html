@@ -22,19 +22,20 @@
 		<script type="importmap">
 			{
 				"imports": {
-					"@remix-run/dom": "https://unpkg.com/@remix-run/dom@latest/dist/index.js",
-					"@remix-run/dom/jsx-runtime": "https://unpkg.com/@remix-run/dom@latest/dist/jsx-runtime.js",
-					"@remix-run/events": "https://unpkg.com/@remix-run/events@latest/dist/index.js",
-					"@remix-run/style": "https://unpkg.com/@remix-run/style@latest/dist/index.js",
+					"@remix-run/dom": "https://unpkg.com/@remix-run/dom@jam/dist/index.js",
+					"@remix-run/dom/jsx-runtime": "https://unpkg.com/@remix-run/dom@jam/dist/jsx-runtime.js",
+					"@remix-run/dom/jsx-dev-runtime": "https://unpkg.com/@remix-run/dom@jam/dist/jsx-dev-runtime.js",
+					"@remix-run/events": "https://unpkg.com/@remix-run/events@jam/dist/index.js",
+					"@remix-run/style": "https://unpkg.com/@remix-run/style@jam/dist/index.js",
 					"htm": "https://unpkg.com/htm?module"
 				}
 			}
 		</script>
 		<script type="module">
-			import htm from "htm";
 			import { createRoot } from "@remix-run/dom";
-			import { jsx } from "@remix-run/dom/jsx-runtime";
+			import { jsx } from "@remix-run/dom/jsx-dev-runtime";
 			import { createEventType, dom } from "@remix-run/events";
+			import htm from "htm";
 
 			const html = htm.bind((type, props, ...children) => {
 				return jsx(type, { ...props, children }, props?.key);
@@ -51,81 +52,80 @@
 
 				let name = "World";
 
-				return () => {
-					return html`
-						<form
-							css=${{
-								display: "flex",
-								flexDirection: "column",
-								justifyContent: "center",
-								alignItems: "center",
-								gap: "0.5rem",
-								height: "100%",
-							}}
-						>
-							<div>
-								<h1>Theme</h1>
+				return () => html`
+					<form
+						css=${{
+							display: "flex",
+							flexDirection: "column",
+							justifyContent: "center",
+							alignItems: "center",
+							gap: "0.5rem",
+							height: "100%",
+						}}
+					>
+						<div>
+							<h1>Theme</h1>
 
-								<div
-									on=${dom.change((event) => {
-										context.theme = event.target.value;
-										this.render();
-									})}
-								>
-									<label>
-										<input
-											type="radio"
-											name="theme"
-											value="light"
-											checked=${context.theme === "light" ? "checked" : null}
-										/>
-										Light
-									</label>
-
-									<label>
-										<input
-											type="radio"
-											name="theme"
-											value="dark"
-											checked=${context.theme === "dark" ? "checked" : null}
-										/>
-										Dark
-									</label>
-								</div>
+							<div
+								on=${dom.change((event) => {
+									context.theme = event.target.value;
+									this.update();
+								})}
+							>
+								<label>
+									<input
+										type="radio"
+										name="theme"
+										value="light"
+										checked=${context.theme === "light"}
+									/>
+									Light
+								</label>
 
 								<label>
 									<input
-										type="checkbox"
-										checked=${context.theme === "dark" ? "checked" : null}
-										on=${dom.input((event) => {
-											context.theme = event.currentTarget.checked
-												? "dark"
-												: "light";
-											this.render();
-										})}
+										type="radio"
+										name="theme"
+										value="dark"
+										checked=${context.theme === "dark"}
 									/>
 									Dark
 								</label>
-
-								<br />
-								Theme: ${context.theme}
 							</div>
 
-							<div hidden>
-								<${HelloWorld}
-									initialName=${name}
-									on=${HelloWorld.input((event) => {
-										name = event.detail;
-										this.render();
+							<label>
+								<input
+									name="dark"
+									type="checkbox"
+									checked=${context.theme === "dark"}
+									on=${dom.input((event) => {
+										context.theme = event.currentTarget.checked
+											? "dark"
+											: "light";
+										this.update();
 									})}
 								/>
-								<h1>Hello again ${name}</h1>
-							</div>
+								Dark
+							</label>
 
-							<${Counter} initialCount=${3} />
-						</form>
-					`;
-				};
+							<br />
+							Theme: ${context.theme}
+						</div>
+
+						<div hidden>
+							<${HelloWorld}
+								initialName=${name}
+								on=${HelloWorld.input((event) => {
+									name = event.detail;
+									this.update();
+								})}
+							/>
+							<h1>Hello again ${name}</h1>
+						</div>
+
+						<${Counter} initialCount=${3} />
+					</form>
+				`;
 			}
 
 			// HelloWorld
@@ -151,7 +151,7 @@
 								event.currentTarget.dispatchEvent(
 									createInput({ detail: name }),
 								);
-								this.render();
+								this.update();
 							})}
 						/>
 						<h1>Hello ${name}</h1>
@@ -167,43 +167,39 @@
 				const context = this.context.get(App);
 				let count = initialCount;
 
-				return () => {
-					return html`
-						<div
-							css=${{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-						>
-							<h1>Count: ${count}</h1>
+				return () => html`
+					<div css=${{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+						<h1>Count: ${count}</h1>
 
-							<div>
-								<button
-									type="button"
-									css=${context.theme === "dark"
-										? { background: "black", color: "white" }
-										: {}}
-									on=${dom.click((event) => {
-										count--;
-										this.render();
-									})}
-								>
-									➖
-								</button>
+						<div>
+							<button
+								type="button"
+								css=${context.theme === "dark"
+									? { background: "black", color: "white" }
+									: {}}
+								on=${dom.click((event) => {
+									count--;
+									this.update();
+								})}
+							>
+								➖
+							</button>
 
-								<button
-									type="button"
-									css=${context.theme === "dark"
-										? { background: "black", color: "white" }
-										: {}}
-									on=${dom.click((event) => {
-										count++;
-										this.render();
-									})}
-								>
-									➕
-								</button>
-							</div>
+							<button
+								type="button"
+								css=${context.theme === "dark"
+									? { background: "black", color: "white" }
+									: {}}
+								on=${dom.click((event) => {
+									count++;
+									this.update();
+								})}
+							>
+								➕
+							</button>
 						</div>
-					`;
-				};
+					</div>
+				`;
 			}
 
 			// Mount
