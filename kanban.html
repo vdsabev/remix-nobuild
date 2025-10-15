@@ -94,16 +94,24 @@
 					<${Dropzone}
 						type="lane"
 						direction="vertical"
-						move=${(lane) => app.moveLane(lane, 0)}
+						on=${Dropzone.drop((event) => {
+							event.stopPropagation();
+							app.moveLane(event.detail, 0);
+							this.update();
+						})}
 					/>
 
 					${app.lanes.map(
 						(lane, index) => html`
-							<${Lane} lane=${lane} actions=${{}} />
+							<${Lane} lane=${lane} />
 							<${Dropzone}
 								type="lane"
 								direction="vertical"
-								on=${Lane.move((lane) => app.moveLane(lane, index + 1))}
+								on=${Dropzone.drop((event) => {
+									event.stopPropagation();
+									app.moveLane(event.detail, index + 1);
+									this.update();
+								})}
 							/>
 						`,
 					)}
@@ -123,6 +131,7 @@
 							}}
 							on=${dom.click((event) => {
 								app.addLane();
+								this.update();
 								event.currentTarget.scrollIntoView({ behavior: "smooth" });
 							})}
 							title="Add lane"
@@ -134,7 +143,7 @@
 			}
 
 			// Lane
-			function Lane({ lane, actions, ...props }) {
+			function Lane({ lane, ...props }) {
 				const app = this.context.get(App);
 				return html`
 					<div
@@ -161,26 +170,32 @@
 							},
 						}}
 						draggable="true"
-						ondragstart=${(event) => {
-							window.itemBeingDragged = { type: "lane", item: lane };
-							event.stopPropagation(); // Prevent parent node from receiving child events
-							event.dataTransfer.effectAllowed = "move";
-							event.dataTransfer.setData(
-								"text/plain",
-								event.currentTarget.innerText,
-							); // Used when dragging into other apps
-						}}
-						ondragover=${(event) => {
-							event.preventDefault(); // Prevent cursor from turning into not-allowed
-						}}
-						ondragend=${() => {
-							window.itemBeingDragged = null;
-						}}
+						on=${[
+							dom.dragstart((event) => {
+								app.itemBeingDragged = { type: "lane", item: lane };
+								event.stopPropagation(); // Prevent parent node from receiving child events
+								event.dataTransfer.effectAllowed = "move";
+								event.dataTransfer.setData(
+									"text/plain",
+									event.currentTarget.innerText,
+								); // Used when dragging into other apps
+							}),
+							dom.dragover((event) => {
+								event.preventDefault(); // Prevent cursor from turning into not-allowed
+							}),
+							dom.dragend(() => {
+								app.itemBeingDragged = null;
+							}),
+						]}
 					>
 						<${Dropzone}
 							type="task"
 							direction="horizontal"
-							move=${(task) => app.moveTask(task, 0, lane)}
+							on=${Dropzone.drop((event) => {
+								event.stopPropagation();
+								app.moveTask(event.detail, 0, lane);
+								this.update();
+							})}
 						>
 							<div css=${{ paddingTop: "0.5rem" }}>
 								<span
@@ -223,7 +238,10 @@
 											backgroundColor: "var(--neutral-0)",
 										},
 									}}
-									onclick=${() => app.removeLane(lane)}
+									on=${dom.click(() => {
+										app.removeLane(lane);
+										this.update();
+									})}
 								>
 									×
 								</button>
@@ -245,17 +263,21 @@
 								}}
 								task=${{ text: "" }}
 								contenteditable
-								onblur=${(event) => {
-									app.addTask(lane, event.currentTarget.textContent);
-									event.currentTarget.textContent = "";
-								}}
-								onkeypress=${(event) => {
-									if (event.key === "Enter" && !event.shiftKey) {
+								on=${[
+									dom.blur((event) => {
 										app.addTask(lane, event.currentTarget.textContent);
+										this.update();
 										event.currentTarget.textContent = "";
-										event.preventDefault();
-									}
-								}}
+									}),
+									dom.keypress((event) => {
+										if (event.key === "Enter" && !event.shiftKey) {
+											app.addTask(lane, event.currentTarget.textContent);
+											this.update();
+											event.currentTarget.textContent = "";
+											event.preventDefault();
+										}
+									}),
+								]}
 							/>
 						<//>
 
@@ -272,7 +294,11 @@
 								<${Dropzone}
 									type="task"
 									direction="horizontal"
-									move=${(task) => app.moveTask(task, index + 1, lane)}
+									on=${Dropzone.drop((event) => {
+										event.stopPropagation();
+										app.moveTask(event.detail, index + 1, lane);
+										this.update();
+									})}
 								/>
 							`,
 						)}
@@ -280,11 +306,8 @@
 				`;
 			}
 
-			const [laneMove, createLaneMove] = createEventType("Lane:move");
-			Lane.move = laneMove;
-
 			// Task
-			function Task({ task, css, textCSS, ...props }) {
+			function Task({ task, css, textCSS, on, ...props }) {
 				return html`
 					<div
 						css=${{
@@ -301,21 +324,24 @@
 							...css,
 						}}
 						draggable=${!!task.text}
-						ondragstart=${(event) => {
-							window.itemBeingDragged = { type: "task", item: task };
-							event.stopPropagation(); // Prevent parent node from receiving child events
-							event.dataTransfer.effectAllowed = "move";
-							event.dataTransfer.setData(
-								"text/plain",
-								event.currentTarget.innerText,
-							); // Used when dragging into other apps
-						}}
-						ondragover=${(event) => {
-							event.preventDefault(); // Prevent cursor from turning into not-allowed
-						}}
-						ondragend=${() => {
-							window.itemBeingDragged = null;
-						}}
+						on=${[
+							dom.dragstart((event) => {
+								app.itemBeingDragged = { type: "task", item: task };
+								event.stopPropagation(); // Prevent parent node from receiving child events
+								event.dataTransfer.effectAllowed = "move";
+								event.dataTransfer.setData(
+									"text/plain",
+									event.currentTarget.innerText,
+								); // Used when dragging into other apps
+							}),
+							dom.dragover((event) => {
+								event.preventDefault(); // Prevent cursor from turning into not-allowed
+							}),
+							dom.dragend(() => {
+								app.itemBeingDragged = null;
+							}),
+							...(Array.isArray(on) ? on : [on]).filter(Boolean),
+						]}
 					>
 						<div
 							key=${task.text}
@@ -333,7 +359,8 @@
 			}
 
 			// Dropzone
-			function Dropzone({ type, direction, move, children, ...props }) {
+			function Dropzone({ type, direction, move, on, children, ...props }) {
+				const app = this.context.get(App);
 				return html`
 					<div
 						...${props}
@@ -367,40 +394,51 @@
 								backgroundColor: "var(--primary)",
 							},
 						}}
-						ondragover=${(event) => {
-							event.preventDefault();
+						on=${[
+							dom.dragover((event) => {
+								event.preventDefault();
 
-							if (window.itemBeingDragged?.type !== type) return;
-							event.currentTarget.setAttribute("data-dragenter", true);
-						}}
-						ondragenter=${(event) => {
-							if (window.itemBeingDragged?.type !== type) return;
+								if (app.itemBeingDragged?.type !== type) return;
+								event.currentTarget.setAttribute("data-dragenter", true);
+							}),
+							dom.dragenter((event) => {
+								if (app.itemBeingDragged?.type !== type) return;
 
-							event.preventDefault();
-							event.stopPropagation();
-							event.currentTarget.setAttribute("data-dragenter", true);
-						}}
-						ondragleave=${(event) => {
-							if (window.itemBeingDragged?.type !== type) return;
+								event.preventDefault();
+								event.stopPropagation();
+								event.currentTarget.setAttribute("data-dragenter", true);
+							}),
+							dom.dragleave((event) => {
+								if (app.itemBeingDragged?.type !== type) return;
 
-							event.stopPropagation();
-							event.currentTarget.removeAttribute("data-dragenter");
-						}}
-						ondrop=${(event) => {
-							const { itemBeingDragged } = window.app;
-							if (itemBeingDragged?.type === type && itemBeingDragged?.item) {
-								move(itemBeingDragged.item);
-								if (document.activeElement instanceof HTMLElement) {
-									document.activeElement.blur();
+								event.stopPropagation();
+								event.currentTarget.removeAttribute("data-dragenter");
+							}),
+							dom.drop((event) => {
+								if (
+									app.itemBeingDragged?.type === type &&
+									app.itemBeingDragged?.item
+								) {
+									event.currentTarget.dispatchEvent(
+										createDropzoneDrop({ detail: app.itemBeingDragged.item }),
+									);
+									if (document.activeElement instanceof HTMLElement) {
+										document.activeElement.blur();
+									}
 								}
-							}
-							event.currentTarget.removeAttribute("data-dragenter");
-						}}
+								event.currentTarget.removeAttribute("data-dragenter");
+							}),
+							...(Array.isArray(on) ? on : [on]),
+						]}
 					>
 						${children}
 					</div>
 				`;
 			}
+
+			const [dropzoneDrop, createDropzoneDrop] =
+				createEventType("Dropzone:drop");
+			Dropzone.drop = dropzoneDrop;
 
 			// Mount
 			createRoot(document.body).render(html`<${App} />`);
