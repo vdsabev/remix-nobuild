@@ -22,16 +22,68 @@
 			import { createRoot } from "@remix-run/dom";
 			import { jsx } from "@remix-run/dom/jsx-dev-runtime";
 			import { createEventType, dom } from "@remix-run/events";
-			import htm from "htm";
 
+			// HTML
+			import htm from "htm";
 			const html = htm.bind((type, props, ...children) => {
 				return jsx(type, { ...props, children }, props?.key);
 			});
 
+			// Data
+			import { createJSONStorage } from "./storage.js";
+			const boardStorage = createJSONStorage({
+				key: "kanban::board",
+				defaultValue: {
+					_id: "6519418024dcd715e1b25f5f",
+					lanes: [
+						{
+							name: "⛏️ To Do",
+							tasks: [
+								{ text: "tu7ikt", _id: "65b6f0a9e3ef8befb0572e59" },
+								{
+									text: "12v battery charging",
+									_id: "68ef31bcc0ba21e91757d9cd",
+								},
+							],
+							_id: "651952a7e8b0a1d2519bf4bb",
+						},
+						{
+							name: "⌛ Doing",
+							tasks: [],
+							_id: "631952a7e8b3f3d3510bf4b0",
+						},
+						{
+							name: "✅ Done",
+							tasks: [
+								{ text: "15:00 food", _id: "678d2c94b4ee3607bbd29586" },
+								{ text: "washing machine", _id: "678d2c8db4ee3607bbd2957c" },
+								{ text: "coffee", _id: "678d2c86b4ee3607bbd29573" },
+							],
+							_id: "678d2c6bb4ee3607bbd2955c",
+						},
+						{
+							name: "⛔ Blockers",
+							tasks: [
+								{ text: "Waiting 1 ...", _id: "678d2cdeb4ee3607bbd29601" },
+								{
+									text: "Waiting test 2 ....",
+									_id: "678d2ce6b4ee3607bbd2960e",
+								},
+								{
+									text: "12v battery charging",
+									_id: "678d2c80b4ee3607bbd2956b",
+								},
+							],
+							_id: "678d2ccbb4ee3607bbd295e8",
+						},
+					],
+				},
+			});
+
 			// App
 			function App() {
-				const context = {}; // TODO: Store the data here
-				this.context.set(context);
+				const app = { board: boardStorage.get() };
+				this.context.set(app);
 
 				return () => html`
 					<main css=${{ display: "flex", height: "100%", padding: "1rem 0" }}>
@@ -67,6 +119,7 @@
 
 			// Board
 			function Board() {
+				const app = this.context.get(App);
 				return html`
 					<${Dropzone}
 						type="lane"
@@ -74,7 +127,7 @@
 						move=${(lane) => actions.moveLane(lane, 0)}
 					/>
 
-					${board.lanes.map(
+					${app.board.lanes.map(
 						(lane, index) => html`
 							<${Lane} lane=${lane} actions=${{}} />
 							<${Dropzone}
@@ -94,9 +147,12 @@
 								backgroundColor: "var(--neutral-0)",
 								padding: "0.75rem",
 								transition: "padding 150ms ease-in-out",
+								"&:hover": {
+									paddingRight: "calc(var(--lane-width) - 2.5rem)",
+								},
 							}}
 							on=${dom.click((event) => {
-								// actions.addLane();
+								actions.addLane();
 								event.currentTarget.scrollIntoView({ behavior: "smooth" });
 							})}
 							title="Add lane"
@@ -109,6 +165,7 @@
 
 			// Lane
 			function Lane({ lane, actions, ...props }) {
+				const app = this.context.get(App);
 				return html`
 					<div
 						...${props}
@@ -236,8 +293,23 @@
 								<${Task}
 									task=${task}
 									contenteditable
-									onblur=${(event) =>
-										actions.updateTask(task, event.currentTarget.textContent)}
+									on=${dom.blur((event) => {
+										const text = event.currentTarget.textContent;
+										if (text) {
+											task.text = text;
+										} else {
+											const lane = app.board.lanes.find((lane) =>
+												lane.tasks.includes(task),
+											);
+											if (!lane) {
+												throw new Error(`Invalid lane for task:`, task);
+											}
+
+											lane.tasks.splice(lane.tasks.indexOf(task), 1);
+										}
+
+										this.update();
+									})}
 								/>
 								<${Dropzone}
 									type="task"
@@ -371,44 +443,6 @@
 					</div>
 				`;
 			}
-
-			// Data
-			const board = {
-				_id: "6519418024dcd715e1b25f5f",
-				lanes: [
-					{
-						name: "⛏️ To Do",
-						tasks: [
-							{ text: "tu7ikt", _id: "65b6f0a9e3ef8befb0572e59" },
-							{ text: "12v battery charging", _id: "68ef31bcc0ba21e91757d9cd" },
-						],
-						_id: "651952a7e8b0a1d2519bf4bb",
-					},
-					{
-						name: "⌛ Doing",
-						tasks: [],
-						_id: "631952a7e8b3f3d3510bf4b0",
-					},
-					{
-						name: "✅ Done",
-						tasks: [
-							{ text: "15:00 food", _id: "678d2c94b4ee3607bbd29586" },
-							{ text: "washing machine", _id: "678d2c8db4ee3607bbd2957c" },
-							{ text: "coffee", _id: "678d2c86b4ee3607bbd29573" },
-						],
-						_id: "678d2c6bb4ee3607bbd2955c",
-					},
-					{
-						name: "⛔ Blockers",
-						tasks: [
-							{ text: "Waiting 1 ...", _id: "678d2cdeb4ee3607bbd29601" },
-							{ text: "Waiting test 2 ....", _id: "678d2ce6b4ee3607bbd2960e" },
-							{ text: "12v battery charging", _id: "678d2c80b4ee3607bbd2956b" },
-						],
-						_id: "678d2ccbb4ee3607bbd295e8",
-					},
-				],
-			};
 
 			// Mount
 			createRoot(document.body).render(html`<${App} />`);
