@@ -29,61 +29,31 @@
 				return jsx(type, { ...props, children }, props?.key);
 			});
 
-			// Data
+			// Actions & Data
+			import { actions } from "./kanban.actions.js";
+			import { board } from "./kanban.data.js";
 			import { createJSONStorage } from "./storage.js";
 			const boardStorage = createJSONStorage({
 				key: "kanban::board",
-				defaultValue: {
-					_id: "6519418024dcd715e1b25f5f",
-					lanes: [
-						{
-							name: "⛏️ To Do",
-							tasks: [
-								{ text: "tu7ikt", _id: "65b6f0a9e3ef8befb0572e59" },
-								{
-									text: "12v battery charging",
-									_id: "68ef31bcc0ba21e91757d9cd",
-								},
-							],
-							_id: "651952a7e8b0a1d2519bf4bb",
-						},
-						{
-							name: "⌛ Doing",
-							tasks: [],
-							_id: "631952a7e8b3f3d3510bf4b0",
-						},
-						{
-							name: "✅ Done",
-							tasks: [
-								{ text: "15:00 food", _id: "678d2c94b4ee3607bbd29586" },
-								{ text: "washing machine", _id: "678d2c8db4ee3607bbd2957c" },
-								{ text: "coffee", _id: "678d2c86b4ee3607bbd29573" },
-							],
-							_id: "678d2c6bb4ee3607bbd2955c",
-						},
-						{
-							name: "⛔ Blockers",
-							tasks: [
-								{ text: "Waiting 1 ...", _id: "678d2cdeb4ee3607bbd29601" },
-								{
-									text: "Waiting test 2 ....",
-									_id: "678d2ce6b4ee3607bbd2960e",
-								},
-								{
-									text: "12v battery charging",
-									_id: "678d2c80b4ee3607bbd2956b",
-								},
-							],
-							_id: "678d2ccbb4ee3607bbd295e8",
-						},
-					],
-				},
+				defaultValue: board,
 			});
 
 			// App
 			function App() {
-				const app = { board: boardStorage.get() };
-				this.context.set(app);
+				this.context.set({
+					...Object.keys(actions).reduce(
+						(proxiedActions, key) => ({
+							...proxiedActions,
+							[key](...args) {
+								const changes = actions[key].call(this, ...args);
+								Object.assign(this, changes);
+								boardStorage.set(this);
+							},
+						}),
+						{},
+					),
+					...boardStorage.get(),
+				});
 
 				return () => html`
 					<main css=${{ display: "flex", height: "100%", padding: "1rem 0" }}>
@@ -124,16 +94,16 @@
 					<${Dropzone}
 						type="lane"
 						direction="vertical"
-						move=${(lane) => actions.moveLane(lane, 0)}
+						move=${(lane) => app.moveLane(lane, 0)}
 					/>
 
-					${app.board.lanes.map(
+					${app.lanes.map(
 						(lane, index) => html`
 							<${Lane} lane=${lane} actions=${{}} />
 							<${Dropzone}
 								type="lane"
 								direction="vertical"
-								on=${Lane.move((lane) => actions.moveLane(lane, index + 1))}
+								on=${Lane.move((lane) => app.moveLane(lane, index + 1))}
 							/>
 						`,
 					)}
@@ -152,7 +122,7 @@
 								},
 							}}
 							on=${dom.click((event) => {
-								actions.addLane();
+								app.addLane();
 								event.currentTarget.scrollIntoView({ behavior: "smooth" });
 							})}
 							title="Add lane"
@@ -192,7 +162,7 @@
 						}}
 						draggable="true"
 						ondragstart=${(event) => {
-							window.app.itemBeingDragged = { type: "lane", item: lane };
+							window.itemBeingDragged = { type: "lane", item: lane };
 							event.stopPropagation(); // Prevent parent node from receiving child events
 							event.dataTransfer.effectAllowed = "move";
 							event.dataTransfer.setData(
@@ -204,13 +174,13 @@
 							event.preventDefault(); // Prevent cursor from turning into not-allowed
 						}}
 						ondragend=${() => {
-							window.app.itemBeingDragged = null;
+							window.itemBeingDragged = null;
 						}}
 					>
 						<${Dropzone}
 							type="task"
 							direction="horizontal"
-							move=${(task) => actions.moveTask(task, 0, lane)}
+							move=${(task) => app.moveTask(task, 0, lane)}
 						>
 							<div css=${{ paddingTop: "0.5rem" }}>
 								<span
@@ -220,9 +190,10 @@
 										fontWeight: "bold",
 									}}
 									contenteditable
-									onblur=${(event) => {
-										actions.updateLane(lane, event.currentTarget.textContent);
-									}}
+									on=${dom.blur((event) => {
+										app.updateLane(lane, event.currentTarget.textContent);
+										this.update();
+									})}
 								>
 									${lane.name}
 								</span>
@@ -252,7 +223,7 @@
 											backgroundColor: "var(--neutral-0)",
 										},
 									}}
-									onclick=${() => actions.removeLane(lane)}
+									onclick=${() => app.removeLane(lane)}
 								>
 									×
 								</button>
@@ -275,12 +246,12 @@
 								task=${{ text: "" }}
 								contenteditable
 								onblur=${(event) => {
-									actions.addTask(lane, event.currentTarget.textContent);
+									app.addTask(lane, event.currentTarget.textContent);
 									event.currentTarget.textContent = "";
 								}}
 								onkeypress=${(event) => {
 									if (event.key === "Enter" && !event.shiftKey) {
-										actions.addTask(lane, event.currentTarget.textContent);
+										app.addTask(lane, event.currentTarget.textContent);
 										event.currentTarget.textContent = "";
 										event.preventDefault();
 									}
@@ -294,27 +265,14 @@
 									task=${task}
 									contenteditable
 									on=${dom.blur((event) => {
-										const text = event.currentTarget.textContent;
-										if (text) {
-											task.text = text;
-										} else {
-											const lane = app.board.lanes.find((lane) =>
-												lane.tasks.includes(task),
-											);
-											if (!lane) {
-												throw new Error(`Invalid lane for task:`, task);
-											}
-
-											lane.tasks.splice(lane.tasks.indexOf(task), 1);
-										}
-
+										app.updateTask(task, event.currentTarget.textContent);
 										this.update();
 									})}
 								/>
 								<${Dropzone}
 									type="task"
 									direction="horizontal"
-									move=${(task) => actions.moveTask(task, index + 1, lane)}
+									move=${(task) => app.moveTask(task, index + 1, lane)}
 								/>
 							`,
 						)}
@@ -344,7 +302,7 @@
 						}}
 						draggable=${!!task.text}
 						ondragstart=${(event) => {
-							window.app.itemBeingDragged = { type: "task", item: task };
+							window.itemBeingDragged = { type: "task", item: task };
 							event.stopPropagation(); // Prevent parent node from receiving child events
 							event.dataTransfer.effectAllowed = "move";
 							event.dataTransfer.setData(
@@ -356,7 +314,7 @@
 							event.preventDefault(); // Prevent cursor from turning into not-allowed
 						}}
 						ondragend=${() => {
-							window.app.itemBeingDragged = null;
+							window.itemBeingDragged = null;
 						}}
 					>
 						<div
@@ -412,18 +370,18 @@
 						ondragover=${(event) => {
 							event.preventDefault();
 
-							if (window.app.itemBeingDragged?.type !== type) return;
+							if (window.itemBeingDragged?.type !== type) return;
 							event.currentTarget.setAttribute("data-dragenter", true);
 						}}
 						ondragenter=${(event) => {
-							if (window.app.itemBeingDragged?.type !== type) return;
+							if (window.itemBeingDragged?.type !== type) return;
 
 							event.preventDefault();
 							event.stopPropagation();
 							event.currentTarget.setAttribute("data-dragenter", true);
 						}}
 						ondragleave=${(event) => {
-							if (window.app.itemBeingDragged?.type !== type) return;
+							if (window.itemBeingDragged?.type !== type) return;
 
 							event.stopPropagation();
 							event.currentTarget.removeAttribute("data-dragenter");
