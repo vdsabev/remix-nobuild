@@ -180,7 +180,7 @@
 						draggable="true"
 						on=${[
 							dom.dragstart((event) => {
-								app.itemBeingDragged = { type: "lane", item: lane };
+								window.itemBeingDragged = { type: "lane", item: lane };
 								event.stopPropagation(); // Prevent parent node from receiving child events
 								event.dataTransfer.effectAllowed = "move";
 								event.dataTransfer.setData(
@@ -192,7 +192,7 @@
 								event.preventDefault(); // Prevent cursor from turning into not-allowed
 							}),
 							dom.dragend(() => {
-								app.itemBeingDragged = null;
+								window.itemBeingDragged = null;
 							}),
 							...(Array.isArray(on) ? on : [on]).filter(Boolean),
 						]}
@@ -276,12 +276,12 @@
 								on=${[
 									dom.blur((event) => {
 										app.addTask(lane, event.currentTarget.textContent);
-										this.update();
 										event.currentTarget.textContent = "";
+										this.update();
 									}),
 									dom.keypress((event) => {
 										if (event.key === "Enter" && !event.shiftKey) {
-											debugger;
+											// TODO: Fix
 											app.addTask(lane, event.currentTarget.textContent);
 											event.currentTarget.textContent = "";
 											event.preventDefault();
@@ -298,7 +298,6 @@
 									task=${task}
 									contenteditable
 									on=${dom.blur((event) => {
-										debugger;
 										app.updateTask(task, event.currentTarget.textContent);
 										// TODO: This updates the state, but does not seem to persist or update the UI
 										this.update();
@@ -342,7 +341,7 @@
 						draggable=${!!task.text}
 						on=${[
 							dom.dragstart((event) => {
-								app.itemBeingDragged = { type: "task", item: task };
+								window.itemBeingDragged = { type: "task", item: task };
 								event.stopPropagation(); // Prevent parent node from receiving child events
 								event.dataTransfer.effectAllowed = "move";
 								event.dataTransfer.setData(
@@ -354,7 +353,7 @@
 								event.preventDefault(); // Prevent cursor from turning into not-allowed
 							}),
 							dom.dragend(() => {
-								app.itemBeingDragged = null;
+								window.itemBeingDragged = null;
 							}),
 						]}
 					>
@@ -413,29 +412,31 @@
 							dom.dragover((event) => {
 								event.preventDefault();
 
-								if (app.itemBeingDragged?.type !== type) return;
+								if (window.itemBeingDragged?.type !== type) return;
 								event.currentTarget.setAttribute("data-dragenter", true);
 							}),
 							dom.dragenter((event) => {
-								if (app.itemBeingDragged?.type !== type) return;
+								if (window.itemBeingDragged?.type !== type) return;
 
 								event.preventDefault();
 								event.stopPropagation();
 								event.currentTarget.setAttribute("data-dragenter", true);
 							}),
 							dom.dragleave((event) => {
-								if (app.itemBeingDragged?.type !== type) return;
+								if (window.itemBeingDragged?.type !== type) return;
 
 								event.stopPropagation();
 								event.currentTarget.removeAttribute("data-dragenter");
 							}),
 							dom.drop((event) => {
 								if (
-									app.itemBeingDragged?.type === type &&
-									app.itemBeingDragged?.item
+									window.itemBeingDragged?.type === type &&
+									window.itemBeingDragged?.item
 								) {
 									event.currentTarget.dispatchEvent(
-										createDropzoneDrop({ detail: app.itemBeingDragged.item }),
+										createDropzoneDrop({
+											detail: window.itemBeingDragged.item,
+										}),
 									);
 									if (document.activeElement instanceof HTMLElement) {
 										document.activeElement.blur();
