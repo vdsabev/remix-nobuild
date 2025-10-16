@@ -149,7 +149,7 @@
 			}
 
 			// Lane
-			function Lane({ lane, on, ...props }) {
+			function Lane({ lane, css, on, ...props }) {
 				const app = this.context.get(App);
 				return html`
 					<div
@@ -174,6 +174,8 @@
 							"&:active": {
 								cursor: "grabbing",
 							},
+
+							...css,
 						}}
 						draggable="true"
 						on=${[
@@ -192,7 +194,7 @@
 							dom.dragend(() => {
 								app.itemBeingDragged = null;
 							}),
-							...on,
+							...(Array.isArray(on) ? on : [on]).filter(Boolean),
 						]}
 					>
 						<${Dropzone}
@@ -279,10 +281,11 @@
 									}),
 									dom.keypress((event) => {
 										if (event.key === "Enter" && !event.shiftKey) {
+											debugger;
 											app.addTask(lane, event.currentTarget.textContent);
-											this.update();
 											event.currentTarget.textContent = "";
 											event.preventDefault();
+											this.update();
 										}
 									}),
 								]}
@@ -295,7 +298,9 @@
 									task=${task}
 									contenteditable
 									on=${dom.blur((event) => {
+										debugger;
 										app.updateTask(task, event.currentTarget.textContent);
+										// TODO: This updates the state, but does not seem to persist or update the UI
 										this.update();
 									})}
 								/>
@@ -318,7 +323,7 @@
 			Lane.remove = laneRemove;
 
 			// Task
-			function Task({ task, css, textCSS, on, ...props }) {
+			function Task({ task, css, textCSS, ...props }) {
 				return html`
 					<div
 						css=${{
@@ -351,17 +356,16 @@
 							dom.dragend(() => {
 								app.itemBeingDragged = null;
 							}),
-							...(Array.isArray(on) ? on : [on]).filter(Boolean),
 						]}
 					>
 						<div
 							key=${task.text}
-							...${props}
 							css=${{
 								padding: "0.5rem 0.75rem",
 								whiteSpace: "pre-line",
 								...textCSS,
 							}}
+							...${props}
 						>
 							${task.text}
 						</div>

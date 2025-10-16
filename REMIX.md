@@ -1,3 +1,7 @@
+---
+published: false
+---
+
 # CREDIT: https://github.com/kentcdodds/remix-jam/blob/7bbc0eb8edce039125369ef3319ace52ae4d4f70/remix-packages-documentation.md
 
 # @remix-run/events and @remix-run/dom Documentation
