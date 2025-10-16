@@ -4,7 +4,7 @@
 		<meta charset="UTF-8" />
 		<title>Remix NoBuild Demo</title>
 
-		<link rel="stylesheet" href="/kanban.css" />
+		<link rel="stylesheet" href="style.css" />
 
 		<script type="importmap">
 			{
@@ -30,8 +30,8 @@
 			});
 
 			// Actions & Data
-			import { actions } from "./kanban.actions.js";
-			import { board } from "./kanban.data.js";
+			import { actions } from "./actions.js";
+			import { board } from "./data.js";
 			import { createJSONStorage } from "./storage.js";
 			const boardStorage = createJSONStorage({
 				key: "kanban::board",
@@ -103,7 +103,13 @@
 
 					${app.lanes.map(
 						(lane, index) => html`
-							<${Lane} lane=${lane} />
+							<${Lane}
+								lane=${lane}
+								on=${Lane.remove((event) => {
+									app.removeLane(event.detail);
+									this.update();
+								})}
+							/>
 							<${Dropzone}
 								type="lane"
 								direction="vertical"
@@ -143,7 +149,7 @@
 			}
 
 			// Lane
-			function Lane({ lane, ...props }) {
+			function Lane({ lane, on, ...props }) {
 				const app = this.context.get(App);
 				return html`
 					<div
@@ -186,6 +192,7 @@
 							dom.dragend(() => {
 								app.itemBeingDragged = null;
 							}),
+							...on,
 						]}
 					>
 						<${Dropzone}
@@ -238,10 +245,11 @@
 											backgroundColor: "var(--neutral-0)",
 										},
 									}}
-									on=${dom.click(() => {
-										app.removeLane(lane);
-										this.update();
-									})}
+									on=${dom.click((event) =>
+										event.currentTarget.dispatchEvent(
+											createLaneRemove({ detail: lane }),
+										),
+									)}
 								>
 									×
 								</button>
@@ -305,6 +313,9 @@
 					</div>
 				`;
 			}
+
+			const [laneRemove, createLaneRemove] = createEventType("Lane:remove");
+			Lane.remove = laneRemove;
 
 			// Task
 			function Task({ task, css, textCSS, on, ...props }) {

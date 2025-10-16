@@ -1,6 +1,6 @@
-/** @typedef {import('./kanban').Board} Board */
-/** @typedef {import('./kanban').Lane} Lane */
-/** @typedef {import('./kanban').Task} Task */
+/** @typedef {import('./types').Board} Board */
+/** @typedef {import('./types').Lane} Lane */
+/** @typedef {import('./types').Task} Task */
 
 export const actions = {
 	// Only used for type checking
