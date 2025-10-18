@@ -45,8 +45,7 @@
 						(proxiedActions, key) => ({
 							...proxiedActions,
 							[key](...args) {
-								const changes = actions[key].call(this, ...args);
-								Object.assign(this, changes);
+								actions[key].call(this, ...args);
 								boardStorage.set(this);
 							},
 						}),
@@ -55,7 +54,7 @@
 					...boardStorage.get(),
 				});
 
-				return () => html`
+				return html`
 					<main css=${{ display: "flex", height: "100%", padding: "1rem 0" }}>
 						<${Board} />
 					</main>
@@ -281,7 +280,6 @@
 									}),
 									dom.keypress((event) => {
 										if (event.key === "Enter" && !event.shiftKey) {
-											// TODO: Fix
 											app.addTask(lane, event.currentTarget.textContent);
 											event.currentTarget.textContent = "";
 											event.preventDefault();
@@ -299,7 +297,6 @@
 									contenteditable
 									on=${dom.blur((event) => {
 										app.updateTask(task, event.currentTarget.textContent);
-										// TODO: This updates the state, but does not seem to persist or update the UI
 										this.update();
 									})}
 								/>
